@@ -1,0 +1,7 @@
+Is the distribution of the number of entries statistically different between rainy & non-rainy days?
+
+YES
+
+Describe your results and the methods used:
+
+I used the Mann-Whitney U test to test whether there was significant difference between the mean ridership on rainy days versus non-rainy days. The p-value calculated is 0.024999, which means that we can say reject the null hypothesis that the mean ridership are the same on rainy vs non-rainy days with 97.5% confidence interval.

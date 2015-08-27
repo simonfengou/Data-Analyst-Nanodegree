@@ -1,0 +1,7 @@
+Does entries data from the previous exercise seem normally distributed?
+
+NO
+
+Can we run Welch's T test on entries data? Why or why not?
+
+No, because Welch's T test is used to test null hypothesis when the data is normally distributed.
