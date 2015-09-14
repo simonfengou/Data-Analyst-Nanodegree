@@ -1,6 +1,6 @@
 
 
-```
+```python
 import numpy as np
 import statsmodels.api as sm
 import scipy
@@ -12,29 +12,28 @@ import time as t
 ```
 
 
-```
+```python
 df = pandas.read_csv('~/Desktop/Computer Science/Data Science/Udacity Nanodegree/Project 2/turnstile_data_master_with_weather.csv')
 ```
 
 # Section 1. Statistical Test
 
 
-```
+```python
 with_rain_data = df['ENTRIESn_hourly'][df['rain'] == 1]
 without_rain_data = df['ENTRIESn_hourly'][df['rain'] == 0]
 with_rain_mean = np.mean(with_rain_data)
 without_rain_mean = np.mean(without_rain_data)
-U, p = scipy.stats.mannwhitneyu(with_rain_data, without_rain_data)
+U, p_half = scipy.stats.mannwhitneyu(with_rain_data, without_rain_data)
 
-print with_rain_mean, without_rain_mean, U, p
+##result returned by scipy.statsmodels.mannwhitneyu correspond to one tailed p-value.
+##To obtained the two tailed p-value this value should be doubled.
+p = p_half * 2
 ```
-
-    1105.44637675 1090.27878015 1924409167.0 0.0249999127935
-
 
 ## 1.1 Which statistical test did you use to analyze the NYC subway data? Did you use a one-tail or a two-tail P value? What is the null hypothesis? What is your p-critical value?
 
-I used the Mann-Whitney U-Test, because the data did not seem normally distributed. I used a two-tail P value, because I was just trying to figure out if ridership changed on rainy vs non-rainy days. The null hypothesis was that the ridership did not change significantly during rainy days. My p-critical value was 0.05, or 5%.
+I used the Mann-Whitney U-Test, because the data did not seem normally distributed. I used a two-tail P value, because I was just trying to figure out if rainy vs non-rainy days will result in higher MTA subway ridership. The null hypothesis is that given two distributions (one distribution is days that rained and the other distribution is days that didn't rain), neither is more likely to generate higher subway ridership. My p-critical value is 0.05, or 5%.
 
 ## 1.2 Why is this statistical test applicable to the dataset? In particular, consider the assumptions that the test is making about the distribution of ridership in the two samples.
 
@@ -42,13 +41,17 @@ I used the Mann-Whitney U-Test, because the data (as shown on exercise 3.1) seem
 
 ## 1.3 What results did you get from this statistical test? These should include the following numerical values: p-values, as well as the means for each of the two samples under test.
 
-Mean ridership with rain: 1105.4463767458733
-Mean ridership without rain: 1090.278780151855
-P-value: 0.024999912793489721
+
+```python
+print "Mean with Rain:", with_rain_mean, "Mean without Rain:", without_rain_mean, "U Value:", U, "P-value:", p
+```
+
+    Mean with Rain: 1105.44637675 Mean without Rain: 1090.27878015 U Value: 1924409167.0 P-value: 0.049999825587
+
 
 ## 1.4 What is the significance and interpretation of these results?
 
-Since 2.5% is below my p-critical value, I can reject the null hypothesis and conclude, with at least 95% confidence, that there is significant difference in ridership when it rains.
+Since the p-value is below my p-critical value, I can reject the null hypothesis and conclude that one distribution does generate higher subway ridership (as indicated by number of subway entries per hour) than the other distribution. Given that the mean ridership when it rains is higher than the mean ridership when it doesn't rain, we can conclude that rain results in higher subway ridership.
 
 # Section 2. Linear Regression
 
@@ -60,11 +63,10 @@ I used OLS using Statsmodel.
 
 I selected the following features for my model:
 • rain
-• fog
 • Hour
 • mean wind speed ('meanwindspdi')
 
-I used the default dummy variable provided by the original model: UNIT.
+I also kept the default dummy variable of UNITs.
 
 ## 2.3 Why did you select these features in your model? We are looking for specific reasons that lead you to believe that the selected features will contribute to the predictive power of your model.
 
@@ -73,7 +75,7 @@ I first selected features based on intuition, then I test them out by adding tho
 ## 2.4 What are the parameters (also known as "coefficients" or "weights") of the non-dummy features in your linear regression model?
 
 
-```
+```python
 def linear_regression(features, values):
     features = sm.add_constant(features)
     model = sm.OLS(values, features)
@@ -82,23 +84,24 @@ def linear_regression(features, values):
     params = results.params[1:]
     return intercept, params
 
-features = df[['rain','fog','Hour', 'meanwindspdi']]
+features = df[['rain','fog','Hour','meanpressurei','meandewpti']]
 values = df['ENTRIESn_hourly']
 
 print linear_regression(features, values)
 ```
 
-    (253.57827882740668, rain            -28.109469
-    fog             101.489650
-    Hour             59.498959
-    meanwindspdi     33.536798
+    (8877.2145355395187, rain              13.667392
+    fog               88.942006
+    Hour              59.492071
+    meanpressurei   -271.836385
+    meandewpti        -5.766850
     dtype: float64)
 
 
 
-```
+```python
 def predictions(dataframe):
-    features = dataframe[['rain','fog','Hour','meantempi', 'meanwindspdi']]
+    features = dataframe[['rain','fog','Hour','meanpressurei','meandewpti']]
     dummy_units = pandas.get_dummies(dataframe['UNIT'], prefix='unit')
     features = features.join(dummy_units)
     
@@ -111,14 +114,14 @@ def predictions(dataframe):
 print predictions(df)
 ```
 
-    [ 3355.90602719  3625.50380408  3895.10158097 ...,   825.47285908
-       825.47285908   825.47285908]
+    [ 3331.41291197  3601.01111796  3870.60932395 ...,   845.47320377
+       845.47320377   845.47320377]
 
 
 ## 2.5 What is your model’s R2 (coefficients of determination) value?
 
 
-```
+```python
 def compute_r_squared(data, predictions):
     slope, intercept, r_value, p_value, std_err = scipy.stats.linregress(data, predictions)
     r_squared = r_value**2
@@ -128,15 +131,15 @@ def compute_r_squared(data, predictions):
 print compute_r_squared(df['ENTRIESn_hourly'], predictions(df))
 ```
 
-    0.458611756916
+    0.458304281707
 
 
 ## 2.6 What does this R2 value mean for the goodness of fit for your regression model? Do you think this linear model to predict ridership is appropriate for this dataset, given this R2 value?
 
-The closeer the R2 value is to 1, the better the fit of my regression model. To determine its appropriateness for predicting ridership, it might be more useful to plot the residuals.
+R2 measures the level of variation explained by the regression line. So, a R2 value of 0.46 shows that only 46% of the variation is explained by our linear model. Simply looking at the R2 value is not enough to determine whether this linear model is appropriate to predict ridership. To get a better understanding, I have generated a residual plot.
 
 
-```
+```python
 %pylab inline
 
 plt.figure()
@@ -151,17 +154,17 @@ plt.show()
 ![png](output_26_1.png)
 
 
-The histogram shows that the majority of the predictions are good (shown by the high frequency around '0' residuals in the x-axis). However, there are times where the residuals get higher. However, given the normal distribution of the residuals, it is safe to conclude that a linear model is most appropriate in determining ridership.
+The residual plot shows that the majority of the predictions are good (shown by the high frequency around '0' residuals in the x-axis). Also, given the normal distribution of the residuals, it is safe to conclude that a linear model is sufficiently appropriate in helping us predict ridership. However, given that the normal distribution is not perfect, we must be aware of signs of heteroskedasticity.
 
 # Section 3. Visualization
 
 ## 3.1 One visualization should contain two histograms: one of  ENTRIESn_hourly for rainy days and one of ENTRIESn_hourly for non-rainy days.
 
 
-```
+```python
 from ggplot import *
 
-plot = ggplot(aes(x='ENTRIESn_hourly', fill='rain'), data=df)+ geom_histogram(binwidth= 500) + xlim(0, 7000) + \
+plot = ggplot(aes(x='ENTRIESn_hourly', fill='rain'), data=df)+ geom_histogram(binwidth= 200) + xlim(0, 7000) + \
 ggtitle('MTA ridership on rainy vs non-rainy days') + xlab('Hourly MTA Entries') + ylab('Frequency')
     
 print plot
@@ -175,7 +178,7 @@ print plot
 ![png](output_30_1.png)
 
 
-    <ggplot: (282123113)>
+    <ggplot: (284670573)>
 
 
 At first glance, one might be tempted to conclude that total ridership on rainy days are lower.  However, it is important to consider that the histogram is plotting aggregated data--not taking into consideration that there were more non-rainy days than rainy days. To be specific, there were only 10 rainy days as oppose to 21 non-rainy days.
@@ -183,7 +186,7 @@ At first glance, one might be tempted to conclude that total ridership on rainy 
 ## 3.2 One visualization can be more freeform. You should feel free to implement something that we discussed in class (e.g., scatter plots, line plots) or attempt to implement something more advanced if you'd like.
 
 
-```
+```python
 df_time = pandas.DataFrame(df.groupby('Hour')['ENTRIESn_hourly'].sum())
 df_time['Hour'] = df_time.index
 
@@ -197,7 +200,7 @@ print plot_2
 ![png](output_33_0.png)
 
 
-    <ggplot: (279646013)>
+    <ggplot: (284800685)>
 
 
 Unsurprisingly, the time of day has a huge effect on overall ridership. There are peaks during rush hour (8-9am and 4-5pm). However, the peak during lunch and late evening (12pm and 8pm) are much higher than the rush hour peaks.  This was surprising to me.
@@ -212,12 +215,10 @@ From my analysis, I would conclude that more people ride the NYC subway when it 
 
 The results from the Mann-Whitney U test returns a p-value of 0.025, suggesting that there is a statistically significant different in MTA ridership when it rains versus when it doesn't rain. That, combined with the fact that mean entries with rain (1105.5) is higher than the mean entries without rain (1090.3) led me to conclude that more people ride the NYC subway when it is raining.
 
-However, the linear regression analysis suggest otherwise. The coefficient for the 'rain' parameter is -28.1, suggesting that there's a negative correleation relationship between ridership and rain. However, a closer examination of other parameters suggest that other factors, such as fog, hour, mean wind speed, all have larger weights in affecting subway ridership. Thus, I am inclined to trust the conclusion from the Mann-Whitney U test more, given that it only considers the 'rain' variable.
+The parameter from the linear regression for rain is 13.67, supporting the results from the Mann-Whitney U test that rain days results in higher MTA ridership. However given that the parameter is 13.67, I am inclined to believe that other factors (such as hour) have a larger impact on overall ridership than rain.
 
 # Section 5. Reflection
 
 ## 5.1 Please discuss potential shortcomings of the methods of your analysis
 
 This dataset is only for the month of May, so naturally, I would not feel confident in extrapolating any preliminary conclusions on the effects on ridership across other months (especially since time of the year has big effects on weather, temperature, holidays, etc.)
-
-From my analysis, I would also be aware of multicollinearity among the features I picked.  For example, rain, fog, and mean wind speed all have strong linear relationship with one another.
